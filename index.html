@@ -8,8 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Smart Medicine Box</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
 <style>
   :root {
     --bg: #0a0f1e;
@@ -27,313 +25,146 @@
     --mono: 'DM Mono', monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    min-height: 100vh;
-    padding-bottom: 80px;
-  }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; padding-bottom: 80px; }
 
-  /* Header */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-icon {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
+  .header-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   .header-title { font-size: 16px; font-weight: 500; }
   .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent2);
-    animation: pulse 2s infinite;
-  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* Nav */
-  .nav {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    z-index: 100;
-  }
-  .nav-btn {
-    flex: 1; padding: 12px 0;
-    background: none; border: none;
-    color: var(--text3);
-    font-family: var(--font);
-    font-size: 10px;
-    display: flex; flex-direction: column;
-    align-items: center; gap: 4px;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
+  .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+  .nav-btn { flex: 1; padding: 12px 0; background: none; border: none; color: var(--text3); font-family: var(--font); font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: color 0.2s; }
   .nav-btn.active { color: var(--accent); }
   .nav-btn svg { width: 20px; height: 20px; }
 
-  /* Pages */
   .page { display: none; padding: 20px; }
   .page.active { display: block; }
 
-  /* Cards */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-  .card-title {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
 
-  /* Sensor Cards */
+  /* Clock */
+  .clock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 12px; text-align: center; }
+  .clock-time { font-size: 48px; font-weight: 300; font-family: var(--mono); letter-spacing: 2px; }
+  .clock-date { font-size: 13px; color: var(--text2); margin-top: 6px; }
+
   .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .sensor-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px;
-  }
+  .sensor-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
   .sensor-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; }
   .sensor-value { font-size: 32px; font-weight: 300; font-family: var(--mono); }
   .sensor-unit { font-size: 14px; color: var(--text2); }
   .sensor-card.danger { border-color: var(--danger); }
   .sensor-card.danger .sensor-value { color: var(--danger); }
 
-  /* Medicine List */
-  .med-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .med-num {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    background: rgba(59,130,246,0.15);
-    color: var(--accent);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 500;
-    flex-shrink: 0;
-  }
+  .med-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  .med-num { width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
   .med-info { flex: 1; min-width: 0; }
   .med-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .med-dose { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .med-time {
-    font-size: 12px; font-family: var(--mono);
-    color: var(--accent);
-    background: rgba(59,130,246,0.1);
-    padding: 4px 8px;
-    border-radius: 6px;
-    white-space: nowrap;
-  }
-  .med-edit-btn {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text2);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
+  .med-time { font-size: 12px; font-family: var(--mono); color: var(--accent); background: rgba(59,130,246,0.1); padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+  .med-edit-btn { width: 32px; height: 32px; border-radius: 8px; background: none; border: 1px solid var(--border); color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-  /* Edit Form */
   .edit-form { display: none; }
   .edit-form.open { display: block; }
   .form-group { margin-bottom: 12px; }
   .form-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; display: block; }
-  .form-input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
+  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.2s; }
   .form-input:focus { border-color: var(--accent); }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .save-btn {
-    width: 100%;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    padding: 12px;
-    color: white;
-    font-family: var(--font);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 4px;
-    transition: opacity 0.2s;
-  }
+  .save-btn { width: 100%; background: var(--accent); border: none; border-radius: 10px; padding: 12px; color: white; font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px; transition: opacity 0.2s; }
   .save-btn:active { opacity: 0.8; }
 
-  /* Logs */
-  .log-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .log-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: rgba(16,185,129,0.15);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
+  .log-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  .log-icon { width: 36px; height: 36px; border-radius: 10px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .log-name { font-size: 14px; font-weight: 500; }
   .log-dose { font-size: 12px; color: var(--text2); }
   .log-time { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-left: auto; text-align: right; }
 
-  /* Notification Banner */
-  .notif-banner {
-    background: rgba(16,185,129,0.1);
-    border: 1px solid rgba(16,185,129,0.3);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    display: none;
-    align-items: center;
-    gap: 10px;
-  }
+  .notif-banner { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; }
   .notif-banner.show { display: flex; }
-  .notif-banner.warn {
-    background: rgba(245,158,11,0.1);
-    border-color: rgba(245,158,11,0.3);
-  }
+  .notif-banner.warn { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
   .notif-text { font-size: 13px; }
   .notif-title { font-weight: 500; }
   .notif-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
 
-  /* Empty state */
-  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
-
-  /* Temp alert */
-  .temp-alert {
-    background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    display: none;
-    align-items: center;
-    gap: 10px;
-  }
+  .temp-alert { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; }
   .temp-alert.show { display: flex; }
-
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
   .loading { text-align: center; padding: 20px; color: var(--text3); font-size: 13px; }
 </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
   <div class="header-left">
-    <div class="header-icon">💊</div>
+    <div class="header-icon">&#128138;</div>
     <div>
       <div class="header-title">Smart Medicine Box</div>
       <div class="header-sub" id="conn-status">Connecting...</div>
     </div>
   </div>
-  <div class="status-dot" id="status-dot" style="background:#475569"></div>
+  <div class="status-dot" id="status-dot"></div>
 </div>
 
-<!-- Page: Home -->
 <div class="page active" id="page-home">
 
-  <!-- Notification Banner -->
   <div class="notif-banner" id="notif-banner">
-    <span style="font-size:20px">💊</span>
+    <span style="font-size:20px">&#128138;</span>
     <div class="notif-text">
       <div class="notif-title" id="notif-title">Medicine taken</div>
       <div class="notif-sub" id="notif-sub"></div>
     </div>
   </div>
 
-  <!-- Temp Alert -->
   <div class="temp-alert" id="temp-alert">
-    <span style="font-size:20px">🌡️</span>
+    <span style="font-size:20px">&#127777;</span>
     <div class="notif-text">
       <div class="notif-title" id="temp-alert-title">Temperature Alert</div>
       <div class="notif-sub" id="temp-alert-sub"></div>
     </div>
   </div>
 
-  <!-- Sensors -->
+  <!-- ساعة حية -->
+  <div class="clock-card">
+    <div class="clock-time" id="clock-time">00:00:00</div>
+    <div class="clock-date" id="clock-date"></div>
+  </div>
+
   <div class="sensor-grid">
     <div class="sensor-card" id="temp-card">
-      <div class="sensor-label">🌡️ Temperature</div>
-      <div class="sensor-value" id="temp-val">--<span class="sensor-unit">°C</span></div>
+      <div class="sensor-label">&#127777; Temperature</div>
+      <div class="sensor-value" id="temp-val">--<span class="sensor-unit">&deg;C</span></div>
     </div>
     <div class="sensor-card" id="hum-card">
-      <div class="sensor-label">💧 Humidity</div>
+      <div class="sensor-label">&#128167; Humidity</div>
       <div class="sensor-value" id="hum-val">--<span class="sensor-unit">%</span></div>
     </div>
   </div>
 
-  <!-- Next Medicine -->
   <div class="card">
     <div class="card-title">Next medicine</div>
     <div id="next-med-info" class="loading">Loading...</div>
   </div>
 
-  <!-- Last log -->
   <div class="card">
     <div class="card-title">Last dose taken</div>
     <div id="last-log" class="loading">Loading...</div>
   </div>
 </div>
 
-<!-- Page: Medicines -->
 <div class="page" id="page-meds">
   <div class="card-title" style="margin-bottom:12px">All medicines</div>
   <div id="meds-list" class="loading">Loading...</div>
 </div>
 
-<!-- Page: Logs -->
 <div class="page" id="page-logs">
   <div class="card-title" style="margin-bottom:12px">Dose history</div>
   <div id="logs-list" class="loading">Loading...</div>
 </div>
 
-<!-- Bottom Nav -->
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('home',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
@@ -354,19 +185,42 @@ const FIREBASE_URL = "https://smart-medicine-box-mh192-default-rtdb.europe-west1
 const FIREBASE_SECRET = "4uv60ZPXj04aid2jZXRFmuWzjZxIot0k11cj0XbX";
 
 function fbGet(path) {
-  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`)
-    .then(r => r.json());
+  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`).then(r => r.json());
 }
 function fbSet(path, data) {
   return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`, {
-    method: 'PUT',
-    body: JSON.stringify(data)
+    method: 'PUT', body: JSON.stringify(data)
   }).then(r => r.json());
 }
 
 let medsData = {};
 let logsData = {};
 let lastNotifTime = 0;
+
+// ساعة حية بتعد الثواني بدقة
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock-time').textContent = `${h}:${m}:${s}`;
+
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('clock-date').textContent =
+    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// بتبدأ الساعة بدقة على كل ثانية
+function startClock() {
+  updateClock();
+  const now = new Date();
+  const msUntilNextSecond = 1000 - now.getMilliseconds();
+  setTimeout(() => {
+    updateClock();
+    setInterval(updateClock, 1000);
+  }, msUntilNextSecond);
+}
 
 function showPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -399,11 +253,11 @@ function renderMeds() {
     <div class="edit-form card" id="edit-${key}">
       <div class="form-group">
         <label class="form-label">Medicine name</label>
-        <input class="form-input" id="name-${key}" value="${med.name}" placeholder="Medicine name">
+        <input class="form-input" id="name-${key}" value="${med.name}">
       </div>
       <div class="form-group">
         <label class="form-label">Dose</label>
-        <input class="form-input" id="dose-${key}" value="${med.dose}" placeholder="e.g. 1 tablet">
+        <input class="form-input" id="dose-${key}" value="${med.dose}">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -425,8 +279,7 @@ function renderMeds() {
 }
 
 function toggleEdit(key) {
-  const form = document.getElementById('edit-' + key);
-  form.classList.toggle('open');
+  document.getElementById('edit-' + key).classList.toggle('open');
 }
 
 function saveMed(key) {
@@ -444,13 +297,13 @@ function saveMed(key) {
     document.getElementById('edit-' + key).classList.remove('open');
     renderMeds();
     renderNextMed();
-    showToast('Saved!');
+    showToast('Saved successfully!');
   });
 }
 
 function showToast(msg) {
   const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;';
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;white-space:nowrap';
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2000);
@@ -468,7 +321,7 @@ function renderNextMed() {
   if (next) {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:28px">💊</div>
+        <div style="font-size:28px">&#128138;</div>
         <div>
           <div style="font-size:16px;font-weight:500">${next.name}</div>
           <div style="font-size:12px;color:var(--text2)">${next.dose}</div>
@@ -476,7 +329,7 @@ function renderNextMed() {
         </div>
       </div>`;
   } else {
-    el.innerHTML = '<div style="color:var(--text2);font-size:13px">All doses for today completed ✓</div>';
+    el.innerHTML = '<div style="color:var(--text2);font-size:13px">All doses for today completed &#10003;</div>';
   }
 }
 
@@ -484,9 +337,12 @@ function renderLogs() {
   const el = document.getElementById('logs-list');
   if (!logsData || !Object.keys(logsData).length) {
     el.innerHTML = '<div class="empty">No logs yet</div>';
+    document.getElementById('last-log').innerHTML = '<div style="color:var(--text3);font-size:13px">No doses recorded yet</div>';
     return;
   }
-  const sorted = Object.values(logsData).sort((a,b) => (b.year*10000+b.month*100+b.day) - (a.year*10000+a.month*100+a.day));
+  const sorted = Object.values(logsData).sort((a,b) =>
+    (b.year*10000+b.month*100+b.day) - (a.year*10000+a.month*100+a.day)
+  );
   el.innerHTML = sorted.map(log => `
     <div class="log-item">
       <div class="log-icon">
@@ -500,15 +356,14 @@ function renderLogs() {
     </div>
   `).join('');
 
-  // Last log on home
   const last = sorted[0];
   if (last) {
     document.getElementById('last-log').innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:16px">✓</div>
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:16px">&#10003;</div>
         <div>
           <div style="font-size:14px;font-weight:500">${last.name}</div>
-          <div style="font-size:12px;color:var(--text2)">${last.dose} — ${last.day}/${last.month} ${last.hour}:${String(last.minute).padStart(2,'0')}</div>
+          <div style="font-size:12px;color:var(--text2)">${last.dose} &mdash; ${last.day}/${last.month} ${last.hour}:${String(last.minute).padStart(2,'0')}</div>
         </div>
       </div>`;
   }
@@ -518,18 +373,14 @@ function checkNotification(notif) {
   if (!notif || !notif.time) return;
   if (notif.time === lastNotifTime) return;
   lastNotifTime = notif.time;
-
   const banner = document.getElementById('notif-banner');
-  const title = document.getElementById('notif-title');
-  const sub = document.getElementById('notif-sub');
-
   if (notif.taken) {
-    title.textContent = '✓ Dose recorded';
-    sub.textContent = notif.body || '';
+    document.getElementById('notif-title').textContent = 'Dose recorded';
+    document.getElementById('notif-sub').textContent = notif.body || '';
     banner.classList.remove('warn');
   } else {
-    title.textContent = '🔔 ' + (notif.title || 'Medicine time!');
-    sub.textContent = notif.body || '';
+    document.getElementById('notif-title').textContent = notif.title || 'Medicine time!';
+    document.getElementById('notif-sub').textContent = notif.body || '';
     banner.classList.add('warn');
   }
   banner.classList.add('show');
@@ -537,24 +388,18 @@ function checkNotification(notif) {
 }
 
 function checkTemp(temp, hum, alert, alertMsg) {
-  const tempVal = document.getElementById('temp-val');
-  const humVal = document.getElementById('hum-val');
+  if (temp !== null && temp !== undefined && temp !== 0) {
+    document.getElementById('temp-val').innerHTML = temp.toFixed(1) + '<span class="sensor-unit">&deg;C</span>';
+  }
+  if (hum !== null && hum !== undefined && hum !== 0) {
+    document.getElementById('hum-val').innerHTML = hum.toFixed(1) + '<span class="sensor-unit">%</span>';
+  }
   const tempCard = document.getElementById('temp-card');
   const tempAlertEl = document.getElementById('temp-alert');
-  const tempAlertTitle = document.getElementById('temp-alert-title');
-  const tempAlertSub = document.getElementById('temp-alert-sub');
-
-  if (temp !== null && temp !== undefined) {
-    tempVal.innerHTML = temp.toFixed(1) + '<span class="sensor-unit">°C</span>';
-  }
-  if (hum !== null && hum !== undefined) {
-    humVal.innerHTML = hum.toFixed(1) + '<span class="sensor-unit">%</span>';
-  }
-
   if (alert) {
     tempCard.classList.add('danger');
-    tempAlertTitle.textContent = alertMsg || 'Temperature out of range!';
-    tempAlertSub.textContent = `Current: ${temp?.toFixed(1)}°C`;
+    document.getElementById('temp-alert-title').textContent = alertMsg || 'Temperature out of range!';
+    document.getElementById('temp-alert-sub').textContent = `Current: ${temp?.toFixed(1)}&deg;C`;
     tempAlertEl.classList.add('show');
   } else {
     tempCard.classList.remove('danger');
@@ -571,12 +416,9 @@ function loadAll() {
   ]).then(([meds, logs, sensor, notif]) => {
     document.getElementById('status-dot').style.background = '#10b981';
     document.getElementById('conn-status').textContent = 'Connected';
-
     if (meds) { medsData = meds; renderMeds(); renderNextMed(); }
     if (logs) { logsData = logs; renderLogs(); }
-    if (sensor) {
-      checkTemp(sensor.temperature, sensor.humidity, sensor.tempAlert, sensor.alertMsg);
-    }
+    if (sensor) checkTemp(sensor.temperature, sensor.humidity, sensor.tempAlert, sensor.alertMsg);
     if (notif) checkNotification(notif);
   }).catch(() => {
     document.getElementById('status-dot').style.background = '#ef4444';
@@ -584,8 +426,9 @@ function loadAll() {
   });
 }
 
+startClock();
 loadAll();
-setInterval(loadAll, 10000);
+setInterval(loadAll, 15000);
 </script>
 </body>
 </html>
