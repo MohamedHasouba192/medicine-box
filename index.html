@@ -51,11 +51,11 @@
   .clock-date { font-size: 13px; color: var(--text2); margin-top: 6px; }
 
   .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .sensor-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; transition: all 0.2s; }
+  .sensor-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
   .sensor-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
   .sensor-value { font-size: 32px; font-weight: 300; font-family: var(--mono); }
   .sensor-unit { font-size: 14px; color: var(--text2); }
-  .sensor-card.danger { border-color: var(--danger); background: rgba(239,68,68,0.05); }
+  .sensor-card.danger { border-color: var(--danger); }
   .sensor-card.danger .sensor-value { color: var(--danger); }
 
   .med-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
@@ -71,7 +71,7 @@
   .edit-form.open { display: block; }
   .form-group { margin-bottom: 12px; }
   .form-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; display: block; }
-  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; }
   .form-input:focus { border-color: var(--accent); }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .save-btn { width: 100%; background: var(--accent); border: none; border-radius: 10px; padding: 12px; color: white; font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
@@ -86,9 +86,6 @@
   .notif-banner { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; }
   .notif-banner.show { display: flex; }
   .notif-banner.warn { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
-  .notif-text { font-size: 13px; }
-  .notif-title { font-weight: 500; }
-  .notif-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
 
   .temp-alert { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; }
   .temp-alert.show { display: flex; }
@@ -182,15 +179,18 @@
 </nav>
 
 <script>
-const FIREBASE_URL = "https://smart-medicine-box-mh192-default-rtdb.europe-west1.firebasedatabase.app";
-const FIREBASE_SECRET = "4uv60ZPXj04aid2jZXRFmuWzjZxIot0k11cj0XbX";
+// ========== إعدادات Firebase الجديدة ==========
+const FIREBASE_URL = "https://smart-medicine-box-mhh192-default-rtdb.europe-west1.firebasedatabase.app";
+// لا حاجة لـ SECRET لأن القواعد مفتوحة
 
 function fbGet(path) {
-  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`).then(r => r.json());
+  return fetch(`${FIREBASE_URL}${path}.json`).then(r => r.json());
 }
+
 function fbSet(path, data) {
-  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`, {
-    method: 'PUT', body: JSON.stringify(data)
+  return fetch(`${FIREBASE_URL}${path}.json`, {
+    method: 'PUT', 
+    body: JSON.stringify(data)
   }).then(r => r.json());
 }
 
@@ -204,21 +204,14 @@ function updateClock() {
   const m = String(now.getMinutes()).padStart(2,'0');
   const s = String(now.getSeconds()).padStart(2,'0');
   document.getElementById('clock-time').textContent = `${h}:${m}:${s}`;
-
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('clock-date').textContent =
-    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  document.getElementById('clock-date').textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 }
 
 function startClock() {
   updateClock();
-  const now = new Date();
-  const msUntilNextSecond = 1000 - now.getMilliseconds();
-  setTimeout(() => {
-    updateClock();
-    setInterval(updateClock, 1000);
-  }, msUntilNextSecond);
+  setInterval(updateClock, 1000);
 }
 
 function showPage(name, btn) {
@@ -236,16 +229,19 @@ function formatTime(h, m) {
 
 function renderMeds() {
   const el = document.getElementById('meds-list');
-  if (!Object.keys(medsData).length) { el.innerHTML = '<div class="empty">No medicines found</div>'; return; }
+  if (!Object.keys(medsData).length) { 
+    el.innerHTML = '<div class="empty">No medicines found. Please wait for ESP32 to write data...</div>'; 
+    return; 
+  }
   const medsArray = Object.entries(medsData);
   el.innerHTML = medsArray.map(([key, med], i) => `
     <div class="med-item">
       <div class="med-num">${i+1}</div>
       <div class="med-info">
-        <div class="med-name">${med.name}</div>
-        <div class="med-dose">${med.dose}</div>
+        <div class="med-name">${med.name || 'Unknown'}</div>
+        <div class="med-dose">${med.dose || 'N/A'}</div>
       </div>
-      <div class="med-time">${formatTime(med.hour, med.minute)}</div>
+      <div class="med-time">${formatTime(med.hour || 0, med.minute || 0)}</div>
       <button class="med-edit-btn" onclick="toggleEdit('${key}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
@@ -253,20 +249,20 @@ function renderMeds() {
     <div class="edit-form" id="edit-${key}">
       <div class="form-group">
         <label class="form-label">Medicine name</label>
-        <input class="form-input" id="name-${key}" value="${med.name.replace(/"/g, '&quot;')}">
+        <input class="form-input" id="name-${key}" value="${(med.name || '').replace(/"/g, '&quot;')}">
       </div>
       <div class="form-group">
         <label class="form-label">Dose</label>
-        <input class="form-input" id="dose-${key}" value="${med.dose.replace(/"/g, '&quot;')}">
+        <input class="form-input" id="dose-${key}" value="${(med.dose || '').replace(/"/g, '&quot;')}">
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Hour (0-23)</label>
-          <input class="form-input" id="hour-${key}" type="number" min="0" max="23" value="${med.hour}">
+          <input class="form-input" id="hour-${key}" type="number" min="0" max="23" value="${med.hour || 0}">
         </div>
         <div class="form-group">
           <label class="form-label">Minute (0-59)</label>
-          <input class="form-input" id="min-${key}" type="number" min="0" max="59" value="${med.minute}">
+          <input class="form-input" id="min-${key}" type="number" min="0" max="59" value="${med.minute || 0}">
         </div>
       </div>
       <div class="form-group">
@@ -279,22 +275,24 @@ function renderMeds() {
 }
 
 function toggleEdit(key) {
-  document.getElementById('edit-' + key).classList.toggle('open');
+  const el = document.getElementById('edit-' + key);
+  if (el) el.classList.toggle('open');
 }
 
 function saveMed(key) {
   const med = {
     name: document.getElementById('name-'+key).value,
     dose: document.getElementById('dose-'+key).value,
-    hour: parseInt(document.getElementById('hour-'+key).value),
-    minute: parseInt(document.getElementById('min-'+key).value),
+    hour: parseInt(document.getElementById('hour-'+key).value) || 0,
+    minute: parseInt(document.getElementById('min-'+key).value) || 0,
     second: medsData[key]?.second || 0,
-    audioFile: parseInt(document.getElementById('audio-'+key).value),
+    audioFile: parseInt(document.getElementById('audio-'+key).value) || 1,
     ledPin: medsData[key]?.ledPin || 0
   };
   fbSet('/meds/' + key, med).then(() => {
     medsData[key] = med;
-    document.getElementById('edit-' + key).classList.remove('open');
+    const editDiv = document.getElementById('edit-' + key);
+    if (editDiv) editDiv.classList.remove('open');
     renderMeds();
     renderNextMed();
     showToast('✅ Saved successfully!');
@@ -315,7 +313,7 @@ function renderNextMed() {
   const nowMins = now.getHours() * 60 + now.getMinutes();
   let next = null, minDiff = 9999;
   Object.values(medsData).forEach(med => {
-    const medMins = med.hour * 60 + med.minute;
+    const medMins = (med.hour || 0) * 60 + (med.minute || 0);
     const diff = medMins - nowMins;
     if (diff >= 0 && diff < minDiff) { minDiff = diff; next = med; }
   });
@@ -324,9 +322,9 @@ function renderNextMed() {
       <div style="display:flex;align-items:center;gap:14px">
         <div style="font-size:36px">💊</div>
         <div>
-          <div style="font-size:17px;font-weight:500">${next.name}</div>
-          <div style="font-size:13px;color:var(--text2)">${next.dose}</div>
-          <div style="font-size:14px;color:var(--accent);margin-top:5px;font-family:var(--mono)">${formatTime(next.hour, next.minute)}</div>
+          <div style="font-size:17px;font-weight:500">${next.name || 'Unknown'}</div>
+          <div style="font-size:13px;color:var(--text2)">${next.dose || 'N/A'}</div>
+          <div style="font-size:14px;color:var(--accent);margin-top:5px;font-family:var(--mono)">${formatTime(next.hour || 0, next.minute || 0)}</div>
         </div>
       </div>`;
   } else {
@@ -350,10 +348,10 @@ function renderLogs() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
       </div>
       <div>
-        <div class="log-name">${log.name}</div>
-        <div class="log-dose">${log.dose}</div>
+        <div class="log-name">${log.name || 'Unknown'}</div>
+        <div class="log-dose">${log.dose || 'N/A'}</div>
       </div>
-      <div class="log-time">${log.day}/${log.month}/${log.year}<br>${String(log.hour).padStart(2,'0')}:${String(log.minute).padStart(2,'0')}</div>
+      <div class="log-time">${log.day || '?'}/${log.month || '?'}/${log.year || '?'}<br>${String(log.hour || 0).padStart(2,'0')}:${String(log.minute || 0).padStart(2,'0')}</div>
     </div>
   `).join('');
 
@@ -363,8 +361,8 @@ function renderLogs() {
       <div style="display:flex;align-items:center;gap:12px">
         <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:20px">✓</div>
         <div>
-          <div style="font-size:15px;font-weight:500">${last.name}</div>
-          <div style="font-size:12px;color:var(--text2)">${last.dose} · ${last.day}/${last.month} ${String(last.hour).padStart(2,'0')}:${String(last.minute).padStart(2,'0')}</div>
+          <div style="font-size:15px;font-weight:500">${last.name || 'Unknown'}</div>
+          <div style="font-size:12px;color:var(--text2)">${last.dose || 'N/A'} · ${last.day || '?'}/${last.month || '?'} ${String(last.hour || 0).padStart(2,'0')}:${String(last.minute || 0).padStart(2,'0')}</div>
         </div>
       </div>`;
   }
@@ -417,12 +415,19 @@ function loadAll() {
   ]).then(([meds, logs, sensor, notif]) => {
     document.getElementById('status-dot').style.background = '#10b981';
     document.getElementById('conn-status').textContent = 'Connected';
-    if (meds && Object.keys(meds).length) { medsData = meds; renderMeds(); renderNextMed(); }
-    else { renderMeds(); renderNextMed(); }
+    if (meds && Object.keys(meds).length) { 
+      medsData = meds; 
+      renderMeds(); 
+      renderNextMed(); 
+    } else {
+      renderMeds();
+      renderNextMed();
+    }
     if (logs) { logsData = logs; renderLogs(); }
     if (sensor) checkTemp(sensor.temperature, sensor.humidity, sensor.tempAlert, sensor.alertMsg);
     if (notif) checkNotification(notif);
-  }).catch(() => {
+  }).catch((err) => {
+    console.error(err);
     document.getElementById('status-dot').style.background = '#ef4444';
     document.getElementById('conn-status').textContent = 'Connection failed';
   });
