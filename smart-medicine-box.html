@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Smart Medicine Box</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: rgba(255,255,255,0.08);
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #475569;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header-title { font-size: 16px; font-weight: 500; }
+  .header-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Nav */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; padding: 12px 0;
+    background: none; border: none;
+    color: var(--text3);
+    font-family: var(--font);
+    font-size: 10px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 20px; height: 20px; }
+
+  /* Pages */
+  .page { display: none; padding: 20px; }
+  .page.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+
+  /* Sensor Cards */
+  .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .sensor-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .sensor-label { font-size: 11px; color: var(--text2); margin-bottom: 8px; }
+  .sensor-value { font-size: 32px; font-weight: 300; font-family: var(--mono); }
+  .sensor-unit { font-size: 14px; color: var(--text2); }
+  .sensor-card.danger { border-color: var(--danger); }
+  .sensor-card.danger .sensor-value { color: var(--danger); }
+
+  /* Medicine List */
+  .med-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .med-num {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .med-info { flex: 1; min-width: 0; }
+  .med-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .med-dose { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .med-time {
+    font-size: 12px; font-family: var(--mono);
+    color: var(--accent);
+    background: rgba(59,130,246,0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .med-edit-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Edit Form */
+  .edit-form { display: none; }
+  .edit-form.open { display: block; }
+  .form-group { margin-bottom: 12px; }
+  .form-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .save-btn {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    color: white;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: opacity 0.2s;
+  }
+  .save-btn:active { opacity: 0.8; }
+
+  /* Logs */
+  .log-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .log-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: rgba(16,185,129,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .log-name { font-size: 14px; font-weight: 500; }
+  .log-dose { font-size: 12px; color: var(--text2); }
+  .log-time { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-left: auto; text-align: right; }
+
+  /* Notification Banner */
+  .notif-banner {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .notif-banner.show { display: flex; }
+  .notif-banner.warn {
+    background: rgba(245,158,11,0.1);
+    border-color: rgba(245,158,11,0.3);
+  }
+  .notif-text { font-size: 13px; }
+  .notif-title { font-weight: 500; }
+  .notif-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
+
+  /* Temp alert */
+  .temp-alert {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .temp-alert.show { display: flex; }
+
+  .loading { text-align: center; padding: 20px; color: var(--text3); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">💊</div>
+    <div>
+      <div class="header-title">Smart Medicine Box</div>
+      <div class="header-sub" id="conn-status">Connecting...</div>
+    </div>
+  </div>
+  <div class="status-dot" id="status-dot" style="background:#475569"></div>
+</div>
+
+<!-- Page: Home -->
+<div class="page active" id="page-home">
+
+  <!-- Notification Banner -->
+  <div class="notif-banner" id="notif-banner">
+    <span style="font-size:20px">💊</span>
+    <div class="notif-text">
+      <div class="notif-title" id="notif-title">Medicine taken</div>
+      <div class="notif-sub" id="notif-sub"></div>
+    </div>
+  </div>
+
+  <!-- Temp Alert -->
+  <div class="temp-alert" id="temp-alert">
+    <span style="font-size:20px">🌡️</span>
+    <div class="notif-text">
+      <div class="notif-title" id="temp-alert-title">Temperature Alert</div>
+      <div class="notif-sub" id="temp-alert-sub"></div>
+    </div>
+  </div>
+
+  <!-- Sensors -->
+  <div class="sensor-grid">
+    <div class="sensor-card" id="temp-card">
+      <div class="sensor-label">🌡️ Temperature</div>
+      <div class="sensor-value" id="temp-val">--<span class="sensor-unit">°C</span></div>
+    </div>
+    <div class="sensor-card" id="hum-card">
+      <div class="sensor-label">💧 Humidity</div>
+      <div class="sensor-value" id="hum-val">--<span class="sensor-unit">%</span></div>
+    </div>
+  </div>
+
+  <!-- Next Medicine -->
+  <div class="card">
+    <div class="card-title">Next medicine</div>
+    <div id="next-med-info" class="loading">Loading...</div>
+  </div>
+
+  <!-- Last log -->
+  <div class="card">
+    <div class="card-title">Last dose taken</div>
+    <div id="last-log" class="loading">Loading...</div>
+  </div>
+</div>
+
+<!-- Page: Medicines -->
+<div class="page" id="page-meds">
+  <div class="card-title" style="margin-bottom:12px">All medicines</div>
+  <div id="meds-list" class="loading">Loading...</div>
+</div>
+
+<!-- Page: Logs -->
+<div class="page" id="page-logs">
+  <div class="card-title" style="margin-bottom:12px">Dose history</div>
+  <div id="logs-list" class="loading">Loading...</div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('home',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" onclick="showPage('meds',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+    Medicines
+  </button>
+  <button class="nav-btn" onclick="showPage('logs',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    History
+  </button>
+</nav>
+
+<script>
+const FIREBASE_URL = "https://smart-medicine-box-mh192-default-rtdb.europe-west1.firebasedatabase.app";
+const FIREBASE_SECRET = "4uv60ZPXj04aid2jZXRFmuWzjZxIot0k11cj0XbX";
+
+function fbGet(path) {
+  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`)
+    .then(r => r.json());
+}
+function fbSet(path, data) {
+  return fetch(`${FIREBASE_URL}${path}.json?auth=${FIREBASE_SECRET}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }).then(r => r.json());
+}
+
+let medsData = {};
+let logsData = {};
+let lastNotifTime = 0;
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+function formatTime(h, m) {
+  const pm = h >= 12;
+  let hh = h % 12 || 12;
+  return `${hh}:${String(m).padStart(2,'0')} ${pm?'PM':'AM'}`;
+}
+
+function renderMeds() {
+  const el = document.getElementById('meds-list');
+  if (!Object.keys(medsData).length) { el.innerHTML = '<div class="empty">No medicines found</div>'; return; }
+  el.innerHTML = Object.entries(medsData).map(([key, med], i) => `
+    <div class="med-item">
+      <div class="med-num">${i+1}</div>
+      <div class="med-info">
+        <div class="med-name">${med.name}</div>
+        <div class="med-dose">${med.dose}</div>
+      </div>
+      <div class="med-time">${formatTime(med.hour, med.minute)}</div>
+      <button class="med-edit-btn" onclick="toggleEdit('${key}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+    <div class="edit-form card" id="edit-${key}">
+      <div class="form-group">
+        <label class="form-label">Medicine name</label>
+        <input class="form-input" id="name-${key}" value="${med.name}" placeholder="Medicine name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dose</label>
+        <input class="form-input" id="dose-${key}" value="${med.dose}" placeholder="e.g. 1 tablet">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Hour (0-23)</label>
+          <input class="form-input" id="hour-${key}" type="number" min="0" max="23" value="${med.hour}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Minute (0-59)</label>
+          <input class="form-input" id="min-${key}" type="number" min="0" max="59" value="${med.minute}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Audio file number</label>
+        <input class="form-input" id="audio-${key}" type="number" min="1" value="${med.audioFile}">
+      </div>
+      <button class="save-btn" onclick="saveMed('${key}')">Save changes</button>
+    </div>
+  `).join('');
+}
+
+function toggleEdit(key) {
+  const form = document.getElementById('edit-' + key);
+  form.classList.toggle('open');
+}
+
+function saveMed(key) {
+  const med = {
+    name: document.getElementById('name-'+key).value,
+    dose: document.getElementById('dose-'+key).value,
+    hour: parseInt(document.getElementById('hour-'+key).value),
+    minute: parseInt(document.getElementById('min-'+key).value),
+    second: medsData[key].second || 0,
+    audioFile: parseInt(document.getElementById('audio-'+key).value),
+    ledPin: medsData[key].ledPin
+  };
+  fbSet('/meds/' + key, med).then(() => {
+    medsData[key] = med;
+    document.getElementById('edit-' + key).classList.remove('open');
+    renderMeds();
+    renderNextMed();
+    showToast('Saved!');
+  });
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:8px 16px;border-radius:20px;font-size:13px;z-index:999;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function renderNextMed() {
+  const el = document.getElementById('next-med-info');
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  let next = null, minDiff = 9999;
+  Object.values(medsData).forEach(med => {
+    const diff = (med.hour * 60 + med.minute) - nowMins;
+    if (diff >= 0 && diff < minDiff) { minDiff = diff; next = med; }
+  });
+  if (next) {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:28px">💊</div>
+        <div>
+          <div style="font-size:16px;font-weight:500">${next.name}</div>
+          <div style="font-size:12px;color:var(--text2)">${next.dose}</div>
+          <div style="font-size:13px;color:var(--accent);margin-top:4px;font-family:var(--mono)">${formatTime(next.hour, next.minute)}</div>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = '<div style="color:var(--text2);font-size:13px">All doses for today completed ✓</div>';
+  }
+}
+
+function renderLogs() {
+  const el = document.getElementById('logs-list');
+  if (!logsData || !Object.keys(logsData).length) {
+    el.innerHTML = '<div class="empty">No logs yet</div>';
+    return;
+  }
+  const sorted = Object.values(logsData).sort((a,b) => (b.year*10000+b.month*100+b.day) - (a.year*10000+a.month*100+a.day));
+  el.innerHTML = sorted.map(log => `
+    <div class="log-item">
+      <div class="log-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+      </div>
+      <div>
+        <div class="log-name">${log.name}</div>
+        <div class="log-dose">${log.dose}</div>
+      </div>
+      <div class="log-time">${log.day}/${log.month}/${log.year}<br>${log.hour}:${String(log.minute).padStart(2,'0')}</div>
+    </div>
+  `).join('');
+
+  // Last log on home
+  const last = sorted[0];
+  if (last) {
+    document.getElementById('last-log').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:16px">✓</div>
+        <div>
+          <div style="font-size:14px;font-weight:500">${last.name}</div>
+          <div style="font-size:12px;color:var(--text2)">${last.dose} — ${last.day}/${last.month} ${last.hour}:${String(last.minute).padStart(2,'0')}</div>
+        </div>
+      </div>`;
+  }
+}
+
+function checkNotification(notif) {
+  if (!notif || !notif.time) return;
+  if (notif.time === lastNotifTime) return;
+  lastNotifTime = notif.time;
+
+  const banner = document.getElementById('notif-banner');
+  const title = document.getElementById('notif-title');
+  const sub = document.getElementById('notif-sub');
+
+  if (notif.taken) {
+    title.textContent = '✓ Dose recorded';
+    sub.textContent = notif.body || '';
+    banner.classList.remove('warn');
+  } else {
+    title.textContent = '🔔 ' + (notif.title || 'Medicine time!');
+    sub.textContent = notif.body || '';
+    banner.classList.add('warn');
+  }
+  banner.classList.add('show');
+  setTimeout(() => banner.classList.remove('show'), 8000);
+}
+
+function checkTemp(temp, hum, alert, alertMsg) {
+  const tempVal = document.getElementById('temp-val');
+  const humVal = document.getElementById('hum-val');
+  const tempCard = document.getElementById('temp-card');
+  const tempAlertEl = document.getElementById('temp-alert');
+  const tempAlertTitle = document.getElementById('temp-alert-title');
+  const tempAlertSub = document.getElementById('temp-alert-sub');
+
+  if (temp !== null && temp !== undefined) {
+    tempVal.innerHTML = temp.toFixed(1) + '<span class="sensor-unit">°C</span>';
+  }
+  if (hum !== null && hum !== undefined) {
+    humVal.innerHTML = hum.toFixed(1) + '<span class="sensor-unit">%</span>';
+  }
+
+  if (alert) {
+    tempCard.classList.add('danger');
+    tempAlertTitle.textContent = alertMsg || 'Temperature out of range!';
+    tempAlertSub.textContent = `Current: ${temp?.toFixed(1)}°C`;
+    tempAlertEl.classList.add('show');
+  } else {
+    tempCard.classList.remove('danger');
+    tempAlertEl.classList.remove('show');
+  }
+}
+
+function loadAll() {
+  Promise.all([
+    fbGet('/meds'),
+    fbGet('/logs'),
+    fbGet('/sensor'),
+    fbGet('/notification')
+  ]).then(([meds, logs, sensor, notif]) => {
+    document.getElementById('status-dot').style.background = '#10b981';
+    document.getElementById('conn-status').textContent = 'Connected';
+
+    if (meds) { medsData = meds; renderMeds(); renderNextMed(); }
+    if (logs) { logsData = logs; renderLogs(); }
+    if (sensor) {
+      checkTemp(sensor.temperature, sensor.humidity, sensor.tempAlert, sensor.alertMsg);
+    }
+    if (notif) checkNotification(notif);
+  }).catch(() => {
+    document.getElementById('status-dot').style.background = '#ef4444';
+    document.getElementById('conn-status').textContent = 'Connection failed';
+  });
+}
+
+loadAll();
+setInterval(loadAll, 10000);
+</script>
+</body>
+</html>
